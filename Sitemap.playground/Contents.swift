@@ -1,8 +1,8 @@
 import Foundation
 import PlaygroundSupport
-PlaygroundPage.current.needsIndefiniteExecution
+//PlaygroundPage.current.needsIndefiniteExecution = true
 
-PlaygroundPage.current.needsIndefiniteExecution = true
+let semaphore = DispatchSemaphore(value: 0)
 
 
 let url = URL(string: "https://finestructure.co/sitemap.xml")!
@@ -118,6 +118,7 @@ func printRestfile(urls: [Restable]) {
 let task = URLSession.shared.dataTask(with: url) { data, response, error in
     guard let data = data, error == nil else {
         print(error ?? "Unknown error")
+        semaphore.signal()
         return
     }
 
@@ -125,8 +126,8 @@ let task = URLSession.shared.dataTask(with: url) { data, response, error in
     parser.delegate = parserDelegate
     if parser.parse() {
         printRestfile(urls: results)
-        PlaygroundPage.current.finishExecution()
     }
+    semaphore.signal()
 }
 task.resume()
-
+semaphore.wait()
