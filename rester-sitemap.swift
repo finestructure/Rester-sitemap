@@ -1,8 +1,25 @@
 import Foundation
 
 
-let url = URL(string: "https://finestructure.co/sitemap.xml")!
+extension Collection {
+  subscript (safe index: Index) -> Iterator.Element? {
+    return indices.contains(index) ? self[index] : nil
+  }
+}
 
+
+let args = CommandLine.arguments
+
+guard let urlString = args[safe: 1] else {
+    print("Usage: \(args[0]) <sitemap url>")
+    print("Example: \(args[0]) https://finestructure.co/sitemap.xml")
+    exit(1)
+}
+
+guard let url = URL(string: urlString) else {
+    print("URL '\(urlString)' is invalid.")
+    exit(1)
+}
 
 let semaphore = DispatchSemaphore(value: 0)
 
