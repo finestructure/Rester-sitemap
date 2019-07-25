@@ -45,6 +45,23 @@ struct SiteUrl: Restable {
         case priority
         case lastmod
     }
+
+    init?(_ dictionary: [String: String]) {
+        let dictionary = dictionary.mapValues {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        guard
+            let loc = dictionary["loc"],
+            let url = URL(string: loc)
+            else {
+                print("failed to parse url: \(dictionary)")
+                return nil
+        }
+        self.loc = url
+        self.changeFreq = dictionary["changefreq"]
+        self.priority = dictionary["priority"]
+        self.lastMod = dictionary["lastmod"]
+    }
 }
 
 struct ImageUrl: Restable {
@@ -54,6 +71,21 @@ struct ImageUrl: Restable {
     enum Elements: String, CaseIterable {
         case loc = "image:loc"
         case title = "image:title"
+    }
+
+    init?(_ dictionary: [String: String]) {
+        let dictionary = dictionary.mapValues {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        guard
+            let loc = dictionary["image:loc"],
+            let url = URL(string: loc)
+            else {
+                print("failed to parse url: \(dictionary)")
+                return nil
+        }
+        self.loc = url
+        self.title = dictionary["title"]
     }
 }
 
@@ -87,38 +119,12 @@ class ParserDelegate: NSObject, XMLParserDelegate {
 
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
         if elementName == "url" {
-            currentUrl = currentUrl.mapValues {
-                $0.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            guard
-                let loc = currentUrl["loc"],
-                let locUrl = URL(string: loc)
-                else {
-                    print("failed to parse url: \(currentUrl)")
-                    return
-            }
-            let changeFreq = currentUrl["changefreq"]
-            let priority = currentUrl["priority"]
-            let lastMod = currentUrl["lastmod"]
-
-            let siteUrl = SiteUrl(loc: locUrl, changeFreq: changeFreq, priority: priority, lastMod: lastMod)
+            guard let siteUrl = SiteUrl(currentUrl) else { return }
             results.append(siteUrl)
             currentUrl = [:]
         }
         if elementName == "image:image" {
-            currentImage = currentImage.mapValues {
-                $0.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-            guard
-                let loc = currentImage["image:loc"],
-                let locUrl = URL(string: loc)
-                else {
-                    print("failed to parse image: \(currentImage)")
-                    return
-            }
-            let title = currentUrl["title"]
-
-            let image = ImageUrl(loc: locUrl, title: title)
+            guard let image = ImageUrl(currentImage) else { return }
             results.append(image)
             currentImage = [:]
         }
