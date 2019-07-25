@@ -10,6 +10,7 @@ extension Collection {
 
 let args = CommandLine.arguments
 
+
 guard let urlString = args[safe: 1] else {
     print("Usage: \(args[0]) <sitemap url>")
     print("Example: \(args[0]) https://finestructure.co/sitemap.xml")
@@ -20,6 +21,7 @@ guard let url = URL(string: urlString) else {
     print("URL '\(urlString)' is invalid.")
     exit(1)
 }
+
 
 let semaphore = DispatchSemaphore(value: 0)
 
@@ -61,13 +63,9 @@ class ParserDelegate: NSObject, XMLParserDelegate {
     }
 
     func parser(_ parser: XMLParser, foundCharacters string: String) {
-        guard let currentElement = currentElement else { return }
-        if currentUrl.keys.contains(currentElement) {
-            currentUrl[currentElement]! += string
-        }
-        if currentImage.keys.contains(currentElement) {
-            currentImage[currentElement]! += string
-        }
+        guard let e = currentElement else { return }
+        currentUrl[e]?.append(string)
+        currentImage[e]?.append(string)
     }
 
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
