@@ -23,23 +23,40 @@ guard let url = URL(string: urlString) else {
 }
 
 
+// end of script specific code
+
+
 let semaphore = DispatchSemaphore(value: 0)
 
 protocol Restable {
     var loc: URL { get }
 }
 
+
 struct SiteUrl: Restable {
     let loc: URL
     let changeFreq: String?
     let priority: String?
     let lastMod: String?
+
+    enum Elements: String, CaseIterable {
+        case loc
+        case changefreq
+        case priority
+        case lastmod
+    }
 }
 
 struct ImageUrl: Restable {
     let loc: URL
     let title: String?
+
+    enum Elements: String, CaseIterable {
+        case loc = "image:loc"
+        case title = "image:title"
+    }
 }
+
 
 var results: [Restable] = []
 
@@ -55,10 +72,10 @@ class ParserDelegate: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String]) {
         currentElement = elementName
         if currentElement == "url" {
-            currentUrl = ["loc": "", "changefreq": "", "priority": "", "lastmod": ""]
+            currentUrl = Dictionary(uniqueKeysWithValues: SiteUrl.Elements.allCases.map { ($0.rawValue, "") })
         }
         if currentElement == "image:image" {
-            currentImage = ["image:loc": "", "image:title": ""]
+            currentImage = Dictionary(uniqueKeysWithValues: ImageUrl.Elements.allCases.map { ($0.rawValue, "") })
         }
     }
 
