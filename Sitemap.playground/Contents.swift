@@ -9,106 +9,53 @@ let url = URL(string: "https://finestructure.co/sitemap.xml")!
 
 let semaphore = DispatchSemaphore(value: 0)
 
-protocol Restable {
-    var loc: URL { get }
-}
 
+struct TestItem {
+    let url: URL
 
-struct SiteUrl: Restable {
-    let loc: URL
-    let changeFreq: String?
-    let priority: String?
-    let lastMod: String?
-
-    enum Elements: String, CaseIterable {
-        case loc
-        case changefreq
-        case priority
-        case lastmod
-    }
-
-    init?(_ dictionary: [String: String]) {
-        let dictionary = dictionary.mapValues {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines)
+    init?(_ string: String) {
+        let string = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: string) else {
+            print("failed to parse url: \(string)")
+            return nil
         }
-        guard
-            let loc = dictionary["loc"],
-            let url = URL(string: loc)
-            else {
-                print("failed to parse url: \(dictionary)")
-                return nil
-        }
-        self.loc = url
-        self.changeFreq = dictionary["changefreq"]
-        self.priority = dictionary["priority"]
-        self.lastMod = dictionary["lastmod"]
-    }
-}
-
-struct ImageUrl: Restable {
-    let loc: URL
-    let title: String?
-
-    enum Elements: String, CaseIterable {
-        case loc = "image:loc"
-        case title = "image:title"
-    }
-
-    init?(_ dictionary: [String: String]) {
-        let dictionary = dictionary.mapValues {
-            $0.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        guard
-            let loc = dictionary["image:loc"],
-            let url = URL(string: loc)
-            else {
-                print("failed to parse url: \(dictionary)")
-                return nil
-        }
-        self.loc = url
-        self.title = dictionary["title"]
+        self.url = url
     }
 }
 
 
-var results: [Restable] = []
+func isLoc(_ element: String?) -> Bool {
+    return element == "loc" || element == "image:loc"
+}
+
 
 class ParserDelegate: NSObject, XMLParserDelegate {
     var currentElement: String?
-    var currentUrl = [String: String]()
-    var currentImage = [String: String]()
-
-    func parserDidStartDocument(_ parser: XMLParser) {
-        results = []
-    }
+    var buffers: [String] = []
+    var results: [TestItem] = []
 
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String]) {
         currentElement = elementName
-        if currentElement == "url" {
-            currentUrl = Dictionary(uniqueKeysWithValues: SiteUrl.Elements.allCases.map { ($0.rawValue, "") })
-        }
-        if currentElement == "image:image" {
-            currentImage = Dictionary(uniqueKeysWithValues: ImageUrl.Elements.allCases.map { ($0.rawValue, "") })
+        if isLoc(currentElement) {
+            buffers.append("")
         }
     }
 
     func parser(_ parser: XMLParser, foundCharacters string: String) {
-        guard let e = currentElement else { return }
-        currentUrl[e]?.append(string)
-        currentImage[e]?.append(string)
+        if isLoc(currentElement), var b = buffers.popLast() {
+            b.append(string)
+            buffers.append(b)
+        }
     }
 
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
-        if elementName == "url" {
-            guard let siteUrl = SiteUrl(currentUrl) else { return }
-            results.append(siteUrl)
-            currentUrl = [:]
+        if
+            isLoc(currentElement),
+            let b = buffers.popLast(),
+            let item = TestItem(b) {
+            results.append(item)
         }
-        if elementName == "image:image" {
-            guard let image = ImageUrl(currentImage) else { return }
-            results.append(image)
-            currentImage = [:]
-        }
+
     }
 
     func parser(_ parser: XMLParser, parseErrorOccurred parseError: Error) {
@@ -117,15 +64,16 @@ class ParserDelegate: NSObject, XMLParserDelegate {
 
 }
 
+
 let parserDelegate = ParserDelegate()
 
 
-func printRestfile(urls: [Restable]) {
+func printRestfile(items: [TestItem]) {
     print("requests:")
     print("")
-    for url in urls.sorted(by: { $0.loc.path < $1.loc.path }) {
-        print("  path \(url.loc.path):")
-        print("    url: \(url.loc)")
+    for i in items.sorted(by: { $0.url.path < $1.url.path }) {
+        print("  path \(i.url.path):")
+        print("    url: \(i.url)")
         print("    validation:")
         print("      status: 200")
         print("")
@@ -143,7 +91,7 @@ let task = URLSession.shared.dataTask(with: url) { data, response, error in
     let parser = XMLParser(data: data)
     parser.delegate = parserDelegate
     if parser.parse() {
-        printRestfile(urls: results)
+        printRestfile(items: parserDelegate.results)
     }
     semaphore.signal()
 }
