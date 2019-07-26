@@ -23,24 +23,7 @@ guard let url = URL(string: urlString) else {
 }
 
 
-// end of script specific code
-
-
 let semaphore = DispatchSemaphore(value: 0)
-
-
-struct TestItem {
-    let url: URL
-
-    init?(_ string: String) {
-        let string = string.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let url = URL(string: string) else {
-            print("failed to parse url: \(string)")
-            return nil
-        }
-        self.url = url
-    }
-}
 
 
 func isLoc(_ element: String?) -> Bool {
@@ -51,7 +34,7 @@ func isLoc(_ element: String?) -> Bool {
 class ParserDelegate: NSObject, XMLParserDelegate {
     var currentElement: String?
     var buffers: [String] = []
-    var results: [TestItem] = []
+    var urls: [URL] = []
 
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes attributeDict: [String : String]) {
         currentElement = elementName
@@ -70,9 +53,13 @@ class ParserDelegate: NSObject, XMLParserDelegate {
     func parser(_ parser: XMLParser, didEndElement elementName: String, namespaceURI: String?, qualifiedName qName: String?) {
         if
             isLoc(currentElement),
-            let b = buffers.popLast(),
-            let item = TestItem(b) {
-            results.append(item)
+            let string = buffers.popLast() {
+            let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let url = URL(string: trimmed) {
+                urls.append(url)
+            } else {
+                print("failed to parse url: \(trimmed)")
+            }
         }
 
     }
@@ -84,15 +71,12 @@ class ParserDelegate: NSObject, XMLParserDelegate {
 }
 
 
-let parserDelegate = ParserDelegate()
-
-
-func printRestfile(items: [TestItem]) {
+func printRestfile(urls: [URL]) {
     print("requests:")
     print("")
-    for i in items.sorted(by: { $0.url.path < $1.url.path }) {
-        print("  path \(i.url.path):")
-        print("    url: \(i.url)")
+    for url in urls.sorted(by: { $0.path < $1.path }) {
+        print("  path \(url.path):")
+        print("    url: \(url)")
         print("    validation:")
         print("      status: 200")
         print("")
@@ -107,12 +91,14 @@ let task = URLSession.shared.dataTask(with: url) { data, response, error in
         return
     }
 
+    let parserDelegate = ParserDelegate()
     let parser = XMLParser(data: data)
     parser.delegate = parserDelegate
     if parser.parse() {
-        printRestfile(items: parserDelegate.results)
+        printRestfile(urls: parserDelegate.urls)
     }
     semaphore.signal()
 }
+
 task.resume()
 semaphore.wait()
