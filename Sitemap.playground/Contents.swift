@@ -123,7 +123,7 @@ let parserDelegate = ParserDelegate()
 func printRestfile(urls: [Restable]) {
     print("requests:")
     print("")
-    for url in urls {
+    for url in urls.sorted(by: { $0.loc.path < $1.loc.path }) {
         print("  path \(url.loc.path):")
         print("    url: \(url.loc)")
         print("    validation:")
