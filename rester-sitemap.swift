@@ -1,4 +1,8 @@
 import Foundation
+#if os(Linux)
+import FoundationXML
+import FoundationNetworking
+#endif
 
 
 extension Collection {
