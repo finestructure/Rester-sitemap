@@ -5,6 +5,8 @@ stages:
 create sitemap:
     stage: build
     image: swift:5.1.3
+    tags:
+        - docker
     script:
         - swift rester-sitemap.swift https://finestructure.co/sitemap.xml > finestructure.restfile
     artifacts:
@@ -14,6 +16,8 @@ create sitemap:
 run rester:
     stage: test
     image: docker:latest
+    tags:
+        - docker
     services:
       - docker:dind
     script:
