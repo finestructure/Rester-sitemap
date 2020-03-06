@@ -82,7 +82,7 @@ func printRestfile(urls: [URL]) {
         print("  path \(url.path):")
         print("    url: \(url)")
         print("    validation:")
-        print("      status: 200")
+        print("      status: .regex(200|301)")
         print("")
     }
 }
