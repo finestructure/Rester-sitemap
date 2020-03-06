@@ -22,3 +22,4 @@ run rester:
       - docker:dind
     script:
         - docker run --rm -t -v $PWD:/host -w /host finestructure/rester:0.7.2 finestructure.restfile
+    retry: 2
