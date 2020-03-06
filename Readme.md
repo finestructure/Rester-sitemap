@@ -1,0 +1,11 @@
+Create a restfile for [Rester](https://github.com/finestructure/Rester):
+
+```
+swift rester-sitemap.swift https://finestructure.co/sitemap.xml > finestructure.restfile
+```
+
+And then run it:
+
+```
+rester finestructure.restfile
+```
