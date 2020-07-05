@@ -9,3 +9,9 @@ And then run it:
 ```
 rester finestructure.restfile
 ```
+
+Our use the pre-built docker image:
+
+```
+docker run finestructure/rester-sitemap https://finestructure.co/sitemap.xml
+```
